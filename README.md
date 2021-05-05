@@ -1,6 +1,6 @@
 # Data Modeling with Apache Cassandra
 >
-Summary of this project
+In this project, a NoSQL database is created by using Apache Cassandra to analyze a dataset, which contain the songs and the user activities in CSV format. An ETL pipeline with tables created to fit the queries are presented in the jupyter notebook.
 
 ## Table of contents
 
@@ -55,6 +55,7 @@ Below are steps you can follow to complete each component of this project:
 In addition to the data files in the `event_data` folder, the project workspace includes three files:
 
 1. `event_datafile_new.csv` is the file generated from the ***Part I. ETL Pipeline for Pre-Processing the Files*** in file `project_etl.ipynb` listed below. The image below is a screenshot of what the denormalized data should appear like in the **event_datafile_new.csv** after the code above is run:
+
 ![event_datafile_new-image](/images/image_event_datafile_new.jpg)
 
 2. `project_etl.ipynb` reads and processes the csv files from **event_data** folder that will be used for Apache Casssandra tables. This notebook also contains detailed instructions on the ETL process for each of the tables.
