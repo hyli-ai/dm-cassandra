@@ -10,8 +10,10 @@ In this project, a NoSQL database is created by using Apache Cassandra to analyz
 * [Project Steps](#project-steps)
 * [Files in this Project](#files-in-this-project)
 * [Project Instructions](#project-instructions)
+* [Notes on NoSQL database and Apache Cassandra](#notes)
 
 ## Introduction
+
 A startup called Sparkify wants to analyze the data they've been collecting on songs and user activity on their new music streaming app. The analysis team is particularly interested in understanding what songs users are listening to. Currently, there is no easy way to query the data to generate the results, since the data reside in a directory of CSV files on user activity on the app.
 
 As a data engineer, my goal is to create an Apache Cassandra database which can create queries on song play data to answer the questions. I will also be able to test the database by running queries given to me by the analytics team from Sparkify to create the results.
@@ -67,5 +69,32 @@ In addition to the data files in the `event_data` folder, the project workspace 
 
 2. Follow each step in the jupyter notebook `project_etl.ipynb` to finish the project.
 
+## Notes on NoSQL database and Apache Cassandra
 
+When to use NoSQL database
 
+* Need high Availability in the data: Indicates the system is always up and there is no downtime.
+
+* Have Large Amounts of Data.
+
+* Need Linear Scalability: The need to add more nodes to the system so performance will increase linearly.
+
+* Low Latency: Shorter delay before the data is transferred once the instruction for the transfer has been received.
+
+* Need fast reads and write
+
+The CAP Theorem
+
+It is impossible for a distributed data store to simultaneously provide more than two out of three guarantees of **C**onsistency, **A**vailability, and **P**artition tolerance.
+
+* Consistency: Every read from the database gets the latest (and correct) piece of data or an error
+
+* Availability: Every request is received and a response is given -- without a guarantee that the data is the latest update
+
+* Partition Tolerance: The system continues to work regardless of losing network connectivity between nodes
+
+How's the consistency in ACID different from the consistency in CAP?
+
+Consistency in the ACID principle refers to the requirement that only transactions that abide by constraints and database rules are written into the database, otherwise the database keeps previous state. In other words, the data should be correct across all rows and tables. However, consistency in the CAP theorem refers to every read from the database getting the latest piece of data or an error.
+
+Also, there is no such thing as Consistency and Availability in a distributed database since it must always tolerate network issues. You can only have Consistency and Partition Tolerance (CP) or Availability and Partition Tolerance (AP). Remember, relational and non-relational databases do different things, and that's why most companies have both types of database systems.
