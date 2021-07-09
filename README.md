@@ -1,6 +1,22 @@
 # Data Modeling with Apache Cassandra
 >
-In this project, a NoSQL database is created by using Apache Cassandra to analyze a dataset, which contain the songs and the user activities in CSV format. An ETL pipeline with tables created to fit the queries are presented in the jupyter notebook.
+In this project, a NoSQL database is created by using Apache Cassandra<sup>[1](#myfootnote1)</sup> to analyze a dataset, which contain the songs and the user activities in CSV format. An ETL pipeline with tables created to fit the queries are presented in the jupyter notebook.
+
+<a name="myfootnote1"><sup>1</sup></a> Data Modeling in Apache Cassandra:
+
+* Denormalization is not just okay -- it's a must
+
+* Denormalization must be done for fast reads
+
+* Apache Cassandra has been optimized for fast writes
+
+* ALWAYS think Queries first
+
+* One table per query is a great strategy
+
+* Apache Cassandra does not allow for JOINs between tables
+
+In Apache Cassandra, you want to model your data to your queries, and if your business need calls for quickly changing requirements, you need to create a new table to process the data. That is a requirement of Apache Cassandra. If your business needs calls for ad-hoc queries, these are not a strength of Apache Cassandra. However keep in mind that it is easy to create a new table that will fit your new query.
 
 ## Table of contents
 
@@ -10,7 +26,6 @@ In this project, a NoSQL database is created by using Apache Cassandra to analyz
 * [Project Steps](#project-steps)
 * [Files in this Project](#files-in-this-project)
 * [Project Instructions](#project-instructions)
-* [Notes on NoSQL database and Apache Cassandra](#notes)
 
 ## Introduction
 
@@ -69,21 +84,21 @@ In addition to the data files in the `event_data` folder, the project workspace 
 
 2. Follow each step in the jupyter notebook `project_etl.ipynb` to finish the project.
 
-## Notes on NoSQL database and Apache Cassandra
+## Notes on NoSQL Database and Apache Cassandra
 
-When to use NoSQL database
+### When to use a NoSQL database
 
-* Need high Availability in the data: Indicates the system is always up and there is no downtime.
+* Need **high Availability** in the data: Indicates the system is always up and there is no downtime.
 
-* Have Large Amounts of Data.
+* Have **Large Amounts** of Data.
 
-* Need Linear Scalability: The need to add more nodes to the system so performance will increase linearly.
+* Need **Linear Scalability**: The need to add more nodes to the system so performance will increase linearly.
 
-* Low Latency: Shorter delay before the data is transferred once the instruction for the transfer has been received.
+* **Low Latency**: Shorter delay before the data is transferred once the instruction for the transfer has been received.
 
 * Need fast reads and write
 
-The CAP Theorem
+### The CAP Theorem
 
 It is impossible for a distributed data store to simultaneously provide more than two out of three guarantees of **C**onsistency, **A**vailability, and **P**artition tolerance.
 
@@ -93,8 +108,72 @@ It is impossible for a distributed data store to simultaneously provide more tha
 
 * Partition Tolerance: The system continues to work regardless of losing network connectivity between nodes
 
-How's the consistency in ACID different from the consistency in CAP?
+There is no such thing as Consistency and Availability in a distributed database since it must always tolerate network issues. You can only have Consistency and Partition Tolerance (CP) or Availability and Partition Tolerance (AP). Remember, relational and non-relational databases do different things, and that's why most companies have both types of database systems.
 
-Consistency in the ACID principle refers to the requirement that only transactions that abide by constraints and database rules are written into the database, otherwise the database keeps previous state. In other words, the data should be correct across all rows and tables. However, consistency in the CAP theorem refers to every read from the database getting the latest piece of data or an error.
+Q. How's the consistency in ACID different from the consistency in CAP?
 
-Also, there is no such thing as Consistency and Availability in a distributed database since it must always tolerate network issues. You can only have Consistency and Partition Tolerance (CP) or Availability and Partition Tolerance (AP). Remember, relational and non-relational databases do different things, and that's why most companies have both types of database systems.
+A. Consistency in the ACID principle refers to the requirement that only transactions that abide by constraints and database rules are written into the database, otherwise the database keeps previous state. In other words, the data should be correct across all rows and tables. However, consistency in the CAP theorem refers to every read from the database getting the latest piece of data or an error.
+
+### CQL - Cassandra Query Language
+
+CQL is the way to interact with the database and is very similar to SQL. However, JOINs, GROUP BY, and subqueries are not in CQL.
+
+### Partition Key
+
+* Must be unique
+
+* The PRIMARY KEY is made up of either just the PARTITION KEY or may also include additional CLUSTERING COLUMNS
+
+* A Simple PRIMARY KEY is just one column that is also the PARTITION KEY. A Composite PRIMARY KEY is made up of more than one column and will assist in creating a unique value and in your retrieval queries
+
+* The PARTITION KEY will determine the distribution of data across the system
+
+EXAMPLES
+
+**Primary Key Simple (Only one Partition Key)**
+```SQL
+CREATE TABLE music_library (
+    year int,
+    artist_name text,
+    album_name text,
+    PRIMARY KEY(year)
+)
+```
+
+**Primary Key Composite (Two Partition Keys, hashed together)**
+```SQL
+CREATE TABLE music_library (
+    year int,
+    artist_name text,
+    album_name text,
+    PRIMARY KEY(year, artist_name)
+)
+```
+
+**Clustering Columns (One Partition Key + One or more Clustering Columns)**
+```SQL
+CREATE TABLE music_library (
+    year int,
+    artist_name text,
+    album_name text,
+    PRIMARY KEY((year), artist_name)
+)
+```
+
+### Clustering Columns
+
+* The clustering column will sort the data in sorted ascending order, e.g., alphabetical order. 
+
+* More than one clustering column can be added (or none!)
+
+* From there the clustering columns will sort in order of how they were added to the primary key
+
+You can use as many clustering columns as you would like. You cannot use the clustering columns out of order in the SELECT statement. You may choose to omit using a clustering column in your SELECT statement. That's OK. Just remember to use them in order when you are using the SELECT statement.
+
+### WHERE clause
+
+* Data Modeling in Apache Cassandra is query focused, and that focus needs to be on the WHERE clause.
+
+* Failure to include a WHERE clause will **result in an error**.
+
+The WHERE statement is allowing us to do the fast reads. With Apache Cassandra, we are talking about big data -- think terabytes of data -- so we are making it fast for read purposes. Data is spread across all the nodes. By using the WHERE statement, we know which node to go to, from which node to get that data and serve it back. For example, imagine we have 10 years of data on 10 nodes or servers. So 1 year's data is on a separate node. By using the WHERE year = 1 statement we know which node to visit fast to pull the data from.
