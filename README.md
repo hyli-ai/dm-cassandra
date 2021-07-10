@@ -4,17 +4,17 @@ In this project, a NoSQL database is created by using Apache Cassandra<sup>[1](#
 
 <a name="myfootnote1"><sup>1</sup></a> Data Modeling in Apache Cassandra:
 
-* Denormalization is not just okay -- it's a must
+* Denormalization is not just okay -- it's a must.
 
-* Denormalization must be done for fast reads
+* Denormalization must be done for fast reads.
 
-* Apache Cassandra has been optimized for fast writes
+* Apache Cassandra has been optimized for fast writes.
 
-* ALWAYS think Queries first
+* ALWAYS think Queries first.
 
-* One table per query is a great strategy
+* One table per query is a great strategy.
 
-* Apache Cassandra does not allow for JOINs between tables
+* Apache Cassandra does not allow for JOINs between tables.
 
 In Apache Cassandra, you want to model your data to your queries, and if your business need calls for quickly changing requirements, you need to create a new table to process the data. That is a requirement of Apache Cassandra. If your business needs calls for ad-hoc queries, these are not a strength of Apache Cassandra. However keep in mind that it is easy to create a new table that will fit your new query.
 
@@ -46,20 +46,80 @@ event_data/2018-11-08-events.csv
 event_data/2018-11-09-events.csv
 ```
 ## Project Steps
-Below are steps you can follow to complete each component of this project:
+Below are partial code and query results of this project. For detail steps please refer to file `project_etl.ipynb`.
 
 ### Modeling your NoSQL database or Apache Cassandra database
 1. Design tables to answer the queries outlined in the project template.
 
 2. Write Apache Cassandra `CREATE KEYSPACE` and `SET KEYSPACE` statements.
 
+    2-1. Creating a Cluster
+    ```python
+    from cassandra.cluster import Cluster
+    cluster = Cluster()
+
+    session = cluster.connect()
+    ```
+
+    2-2. Create Keyspace
+    ```python
+    session.execute(""" CREATE KEYSPACE IF NOT EXISTS sparkify 
+                    WITH REPLICATION = {'class': 'SimpleStrategy' , 'replication_factor': 1}
+                """)
+    ```
+
+    2-3. Set Keyspace
+    ```python
+    try:
+        session.set_keyspace('sparkify')
+    except Exception as e:
+        print(e)
+    ```
+
 3. Develop the `CREATE` statement for each of the tables to address each question.
 
+    3-1. Create Table
+    ```python
+    session.execute("""CREATE TABLE IF NOT EXISTS song_session
+    (sessionId int,
+     itemInSession int,
+     artist text,
+     song_title text,
+     length float,
+     PRIMARY KEY(sessionId, itemInSession))
+    """) 
+    ```
+
 4. Load the data with `INSERT` statement for each of the tables.
+
+    4-1. Insert Table
+    ```python
+    file = 'event_datafile_new.csv'
+
+    with open(file, encoding = 'utf8') as f:
+        csvreader = csv.reader(f)
+        next(csvreader)
+        for line in csvreader:
+            query = "INSERT INTO song_session(sessionId, itemInSession, artist, song_title, length)"
+            query = query + " VALUES (%s, %s, %s, %s, %s)"
+            session.execute(query, (int(line[8]), int(line[3]), line[0], line[9], float(line[5])))
+    ```
 
 5. Include `IF NOT EXISTS` clauses in your `CREATE` statements to create tables only if the tables do not already exist. Also, include `DROP TABLE` statement for each table, so the database can drop and create tables whenever you want to reset your database and test your ETL pipeline.
 
 6. Test by running the proper select statements with the correct `WHERE` clause.
+
+    6-1. Make a Query
+    ```python
+    query = "SELECT artist, song_title, length from song_session WHERE sessionId=338 AND itemInSession=4"
+    rows = session.execute(query)
+    for row in rows:
+        print(row.artist, row.song_title, row.length)
+    ```
+    Output:
+    ```
+    Faithless Music Matters (Mark Knight Dub) 495.30731201171875
+    ```
 
 ### Build ETL Pipeline
 1. Implement the logic in section Part I of the notebook template to iterate through each event file in `event_data` to process and create a new CSV file in Python.
@@ -130,34 +190,105 @@ CQL is the way to interact with the database and is very similar to SQL. However
 
 EXAMPLES
 
-**Primary Key Simple (Only one Partition Key)**
+**1. Primary Key Simple (Only one Partition Key)**: The Partition Key is `year`.
 ```SQL
 CREATE TABLE music_library (
     year int,
     artist_name text,
     album_name text,
     PRIMARY KEY(year)
-)
+);
 ```
 
-**Primary Key Composite (Two Partition Keys, hashed together)**
+This can also be declared inline:
+```SQL
+CREATE TABLE music_library (
+    year int PRIMARY KEY,
+    artist_name text,
+    album_name text
+);
+```
+
+**2. Composite Partition Key (Composite Partition Key, hashed together)**: The Partition Key is `year` and `artist_name`.
+```SQL
+CREATE TABLE music_library (
+    year int,
+    artist_name text,
+    album_name text,
+    PRIMARY KEY((year, artist_name))
+);
+```
+
+**3. Composite Primary Key (One Partition Key + One Clustering Column)**: The Partition Key is `year`, and the Clustering Key is `artist_name`.
 ```SQL
 CREATE TABLE music_library (
     year int,
     artist_name text,
     album_name text,
     PRIMARY KEY(year, artist_name)
-)
+);
 ```
 
-**Clustering Columns (One Partition Key + One or more Clustering Columns)**
+**4. Composite Primary Key (One Partition Key + two or more Clustering Columns)**: The Partition Key is `year`, and the Clustering Key is `artist_name` and `album_name`.
 ```SQL
 CREATE TABLE music_library (
     year int,
     artist_name text,
     album_name text,
-    PRIMARY KEY((year), artist_name)
-)
+    PRIMARY KEY(year, artist_name, album_name)
+);
+```
+
+**5. Composite Primary Key (Composite Partition Key + one Clustering Column)**: The Composite Partition Key is `year` and `artist_name`, and the Clustering Key is `title`.
+```SQL
+CREATE TABLE music_library (
+    year int,
+    artist_name text,
+    album_name text,
+    PRIMARY KEY((year, artist_name), title)
+);
+```
+
+**6. Composite Primary Key (Composite Partition Key + two or more Clustering Columns)**: The Composite Partition Key is `year` and `artist_name`, and the Clustering Key is `title` and `duration`.
+```SQL
+CREATE TABLE music_library (
+    year int,
+    artist_name text,
+    album_name text,
+    PRIMARY KEY((year, artist_name), title, duration)
+);
+```
+
+The partition key is the minimum-specifier needed to perform a query using a where clause.
+
+On the table defined above, you can perform query only by passing at least both `year` and `artist_name`, these are the 2 columns that define the partition key.
+
+The "general" rule to make query is you have to pass at least all partition key columns, then you can add optionally each clustering key **in the order they're set**.
+
+so the valid queries are (excluding secondary indexes)
+
+* `year` and `artist_name`
+* `year` and `artist_name` and `title`
+* `year` and `artist_name` and `title` and `duration`
+
+Invalid:
+
+* `year` and `artist_name` and `duration`
+* anything that does not contain both `year` and `artist_name`
+
+Examples-1: Valid query
+```SQL
+query = "SELECT * FROM music_library WHERE YEAR = 1970 AND artist_name = 'The Beatles'"
+```
+
+Examples-2: Valid query
+```SQL
+query = "SELECT * FROM music_library WHERE YEAR = 1970 AND artist_name = 'The Beatles' AND title = 'Rubber Soul'"
+```
+
+Examples-3: Invalid query
+```SQL
+query = "SELECT * FROM music_library WHERE YEAR = 1970 AND artist_name = 'The Beatles' AND duration = 30"
 ```
 
 ### Clustering Columns
@@ -172,8 +303,10 @@ You can use as many clustering columns as you would like. You cannot use the clu
 
 ### WHERE clause
 
-* Data Modeling in Apache Cassandra is query focused, and that focus needs to be on the WHERE clause.
+* Data Modeling in Apache Cassandra is query focused, and that focus needs to be on the **WHERE** clause.
 
 * Failure to include a WHERE clause will **result in an error**.
 
 The WHERE statement is allowing us to do the fast reads. With Apache Cassandra, we are talking about big data -- think terabytes of data -- so we are making it fast for read purposes. Data is spread across all the nodes. By using the WHERE statement, we know which node to go to, from which node to get that data and serve it back. For example, imagine we have 10 years of data on 10 nodes or servers. So 1 year's data is on a separate node. By using the WHERE year = 1 statement we know which node to visit fast to pull the data from.
+
+
